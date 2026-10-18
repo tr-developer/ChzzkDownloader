@@ -17,11 +17,13 @@ namespace ChzzkDownloader
         private static readonly Color Green = Color.FromArgb(43, 212, 109);
 
         private readonly ChzzkClient _client = new ChzzkClient();
-        private readonly TextBox _url, _start, _end, _folder, _fileName, _ffmpeg, _log;
+        private readonly TextBox _url, _start, _end, _fileName, _log;
         private readonly ComboBox _qualities;
         private readonly Label _videoInfo, _status;
         private readonly ProgressBar _progress;
         private readonly Button _lookup, _download, _cancel, _copyUrl;
+        private readonly string _outputFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "output");
+        private readonly string _ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
         private CancellationTokenSource _cts;
         private VodInfo _vod;
         private bool _working;
@@ -41,7 +43,7 @@ namespace ChzzkDownloader
             LabelAt("영상 주소를 입력한 뒤 화질과 다운로드 구간을 선택하세요.",
                 22, 55, 800, 23, 9, false, Muted);
             LabelAt("다시보기 URL 또는 영상 번호", 22, 96, 450, 24, 10, true, White);
-            _url = TextBoxAt("https://chzzk.naver.com/video/15707690", 22, 126, 694, 33, true);
+            _url = TextBoxAt("", 22, 126, 694, 33, true);
             _lookup = ButtonAt("영상 정보 조회", 729, 126, 130, 33, true, true);
             _lookup.Click += async (s, e) => await LookupAsync();
             AcceptButton = _lookup;
@@ -88,38 +90,17 @@ namespace ChzzkDownloader
             LabelAt("조회 후 종료 시간이 영상 끝으로 설정됩니다.",
                 477, 372, 370, 28, 8.5F, false, Muted);
 
-            LabelAt("저장 위치", 22, 422, 330, 22, 10, true, White);
-            string movies = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
-            if (string.IsNullOrWhiteSpace(movies))
-                movies = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            _folder = TextBoxAt(movies, 22, 449, 694, 34, true);
-            var browse = ButtonAt("폴더 선택", 729, 449, 130, 34, false, true);
-            browse.Click += (s, e) =>
-            {
-                using (var dlg = new FolderBrowserDialog { Description = "동영상을 저장할 폴더" })
-                {
-                    if (Directory.Exists(_folder.Text)) dlg.SelectedPath = _folder.Text;
-                    if (dlg.ShowDialog(this) == DialogResult.OK) _folder.Text = dlg.SelectedPath;
-                }
-            };
+            LabelAt("저장 위치 (실행 파일 옆 output 폴더 · 자동 생성)", 22, 422, 750, 22, 10, true, White);
+            var folderDisplay = TextBoxAt(_outputFolder, 22, 449, 837, 34, true);
+            folderDisplay.ReadOnly = true;
+            folderDisplay.TabStop = false;
 
             LabelAt("저장 파일명 (.mp4)", 22, 496, 400, 23, 10, true, White);
             _fileName = TextBoxAt("chzzk_video", 22, 523, 837, 34, true);
-            LabelAt("FFmpeg 실행 파일 (ffmpeg.exe)", 22, 568, 400, 23, 10, true, White);
-            var localFfmpeg = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-            _ffmpeg = TextBoxAt(File.Exists(localFfmpeg) ? localFfmpeg : "ffmpeg.exe",
-                22, 595, 694, 34, true);
-            var ffButton = ButtonAt("FFmpeg 선택", 729, 595, 130, 34, false, true);
-            ffButton.Click += (s, e) =>
-            {
-                using (var dlg = new OpenFileDialog
-                {
-                    Title = "ffmpeg.exe 선택", Filter = "ffmpeg.exe|ffmpeg.exe|실행 파일|*.exe"
-                })
-                {
-                    if (dlg.ShowDialog(this) == DialogResult.OK) _ffmpeg.Text = dlg.FileName;
-                }
-            };
+            LabelAt("FFmpeg 경로 (실행 파일과 같은 폴더의 ffmpeg.exe 필수)", 22, 568, 800, 23, 10, true);
+            var ffmpegDisplay = TextBoxAt(_ffmpegPath, 22, 595, 837, 34, true);
+            ffmpegDisplay.ReadOnly = true;
+            ffmpegDisplay.TabStop = false;
 
             _download = ButtonAt("다운로드 시작", 22, 650, 204, 41, true, false);
             _download.Click += async (s, e) => await DownloadAsync();
@@ -283,10 +264,10 @@ namespace ChzzkDownloader
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(_folder.Text) ||
-                string.IsNullOrWhiteSpace(_ffmpeg.Text))
+            if (!File.Exists(_ffmpegPath))
             {
-                MessageBox.Show(this, "저장 폴더와 ffmpeg.exe 경로를 확인하세요.");
+                MessageBox.Show(this, "프로그램 실행 파일과 같은 폴더에 ffmpeg.exe를 넣어 주세요.\n" +
+                    _ffmpegPath, "FFmpeg 파일 없음", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -294,7 +275,7 @@ namespace ChzzkDownloader
             try
             {
                 string name = SafeName(_fileName.Text, _vod.VideoNo);
-                path = Path.GetFullPath(Path.Combine(_folder.Text.Trim(), name + ".mp4"));
+                path = Path.Combine(_outputFolder, name + ".mp4");
                 if (File.Exists(path) &&
                     MessageBox.Show(this, "같은 이름의 파일이 존재합니다. 덮어쓸까요?",
                         "덮어쓰기 확인", MessageBoxButtons.YesNo,
@@ -311,11 +292,16 @@ namespace ChzzkDownloader
             SetWorking(true);
             _progress.Value = 0;
             _status.Text = "최신 다운로드 주소 조회 중...";
+            bool operationFinished = false;
             var report = new Progress<double>(p =>
             {
-                if (IsDisposed) return;
-                _progress.Value = Math.Max(0, Math.Min(100, (int)Math.Round(p)));
-                _status.Text = "다운로드 중: " + p.ToString("0.0") + "%";
+                if (IsDisposed || operationFinished) return;
+                _progress.Value = Math.Max(0, Math.Min(99, (int)Math.Round(p)));
+                _status.Text = "다운로드 중: " + Math.Min(99, p).ToString("0.0") + "%";
+            });
+            var phase = new Progress<string>(message =>
+            {
+                if (!IsDisposed && !operationFinished) _status.Text = message;
             });
 
             try
@@ -328,8 +314,10 @@ namespace ChzzkDownloader
                 if (quality == null)
                     throw new InvalidOperationException("선택한 형식의 다운로드 주소가 만료되었거나 사라졌습니다.");
 
-                await FfmpegDownloader.DownloadAsync(_ffmpeg.Text.Trim(), quality.Url,
-                    from, to, path, report, Log, _cts.Token);
+                await FfmpegDownloader.DownloadAsync(quality.Url,
+                    from, to, path, report, phase, Log, _cts.Token);
+                operationFinished = true;
+                _progress.Value = 100;
                 _status.Text = "다운로드 완료 · " + path;
                 MessageBox.Show(this, "다운로드가 완료되었습니다.\n" + path,
                     "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -346,7 +334,7 @@ namespace ChzzkDownloader
                 MessageBox.Show(this, ex.Message,
                     "다운로드 오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            finally { EndOperation(); }
+            finally { operationFinished = true; EndOperation(); }
         }
 
         private static string SafeName(string input, string fallback)
