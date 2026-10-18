@@ -31,8 +31,8 @@ namespace ChzzkDownloader
         internal MainForm()
         {
             Text = "ChzzkDownloader - 치지직 다시보기 다운로더";
-            ClientSize = new Size(880, 775);
-            MinimumSize = new Size(760, 680);
+            ClientSize = new Size(880, 735);
+            MinimumSize = new Size(760, 700);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Background;
             ForeColor = White;
@@ -90,21 +90,11 @@ namespace ChzzkDownloader
             LabelAt("조회 후 종료 시간이 영상 끝으로 설정됩니다.",
                 477, 372, 370, 28, 8.5F, false, Muted);
 
-            LabelAt("저장 위치 (실행 파일 옆 output 폴더 · 자동 생성)", 22, 422, 750, 22, 10, true, White);
-            var folderDisplay = TextBoxAt(_outputFolder, 22, 449, 837, 34, true);
-            folderDisplay.ReadOnly = true;
-            folderDisplay.TabStop = false;
-
-            LabelAt("저장 파일명 (.mp4)", 22, 496, 400, 23, 10, true, White);
-            _fileName = TextBoxAt("chzzk_video", 22, 523, 837, 34, true);
-            LabelAt("FFmpeg 경로 (실행 파일과 같은 폴더의 ffmpeg.exe 필수)", 22, 568, 800, 23, 10, true, White);
-            var ffmpegDisplay = TextBoxAt(_ffmpegPath, 22, 595, 837, 34, true);
-            ffmpegDisplay.ReadOnly = true;
-            ffmpegDisplay.TabStop = false;
-
-            _download = ButtonAt("다운로드 시작", 22, 650, 204, 41, true, false);
+            LabelAt("저장 파일명 (.mp4)", 22, 426, 400, 23, 10, true, White);
+            _fileName = TextBoxAt("chzzk_video", 22, 454, 837, 34, true);
+            _download = ButtonAt("다운로드 시작", 22, 514, 204, 41, true, false);
             _download.Click += async (s, e) => await DownloadAsync();
-            _cancel = ButtonAt("취소", 241, 650, 105, 41, false, false);
+            _cancel = ButtonAt("취소", 241, 514, 105, 41, false, false);
             _cancel.Click += (s, e) =>
             {
                 if (_cts == null) return;
@@ -113,21 +103,21 @@ namespace ChzzkDownloader
                 _cts.Cancel();
             };
 
-            _status = LabelAt("대기 중", 22, 703, 815, 23, 9, false, Muted);
+            _status = LabelAt("대기 중", 22, 570, 815, 23, 9, false, Muted);
             _progress = new ProgressBar
             {
-                Left = 22, Top = 727, Width = 837, Height = 15,
+                Left = 22, Top = 594, Width = 837, Height = 15,
                 Minimum = 0, Maximum = 100,
                 Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
             };
             Controls.Add(_progress);
-            _log = TextBoxAt("", 22, 753, 837, 82, true);
+            _log = TextBoxAt("", 22, 624, 837, 82, true);
             _log.Multiline = true;
             _log.ReadOnly = true;
             _log.ScrollBars = ScrollBars.Vertical;
             _log.Font = new Font("Consolas", 9F);
-            ClientSize = new Size(880, 850);
-            MinimumSize = new Size(760, 760);
+            ClientSize = new Size(880, 735);
+            MinimumSize = new Size(760, 700);
             _copyUrl.Enabled = false;
             _download.Enabled = false;
             _cancel.Enabled = false;
