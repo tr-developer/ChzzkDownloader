@@ -241,7 +241,7 @@ namespace ChzzkDownloader
                 foreach (var quality in info.Qualities) _qualities.Items.Add(quality);
                 _qualities.SelectedIndex = 0;
                 _start.Text = "00:00:00";
-                _end.Text = TimeCode.Format(info.Duration);
+                _end.Text = TimeCode.Format(TimeSpan.FromSeconds(Math.Ceiling(info.Duration.TotalSeconds)));
                 _fileName.Text = SafeName(info.Title, info.VideoNo);
                 _status.Text = "정보 조회 완료 · 시간과 화질을 선택하세요.";
                 Log("영상 정보 확인: " + info.Title);
