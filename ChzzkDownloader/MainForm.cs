@@ -97,7 +97,7 @@ namespace ChzzkDownloader
 
             LabelAt("저장 파일명 (.mp4)", 22, 496, 400, 23, 10, true, White);
             _fileName = TextBoxAt("chzzk_video", 22, 523, 837, 34, true);
-            LabelAt("FFmpeg 경로 (실행 파일과 같은 폴더의 ffmpeg.exe 필수)", 22, 568, 800, 23, 10, true);
+            LabelAt("FFmpeg 경로 (실행 파일과 같은 폴더의 ffmpeg.exe 필수)", 22, 568, 800, 23, 10, true, White);
             var ffmpegDisplay = TextBoxAt(_ffmpegPath, 22, 595, 837, 34, true);
             ffmpegDisplay.ReadOnly = true;
             ffmpegDisplay.TabStop = false;
