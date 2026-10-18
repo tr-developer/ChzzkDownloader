@@ -1,0 +1,19 @@
+name: Build WinForms (.NET Framework 4.8)
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build solution
+        run: msbuild ChzzkDownloader.sln /t:Restore,Build /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChzzkDownloader-net48
+          path: ChzzkDownloader/bin/Release/
+          if-no-files-found: error

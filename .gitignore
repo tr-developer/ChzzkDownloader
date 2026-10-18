@@ -1,0 +1,16 @@
+# Visual Studio
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.cache
+*.log
+*.userosscache
+*.sln.docstates
+*.pdb
+
+# Local FFmpeg binaries and videos
+ffmpeg.exe
+*.mp4
+*.partial.mp4
